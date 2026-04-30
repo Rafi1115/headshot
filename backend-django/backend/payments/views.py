@@ -13,6 +13,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class CreateCheckoutSessionView(APIView):
     def post(self, request, job_id):
+        print(f"DEBUG: CreateCheckoutSessionView hit for job_id: {job_id}")
         try:
             job = Job.objects.get(id=job_id)
         except Job.DoesNotExist:

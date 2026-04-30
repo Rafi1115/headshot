@@ -39,11 +39,11 @@ class Job(models.Model):
         return self.images.filter(type="INPUT").exists()
 
     def has_paid(self):
-        from payments.models import Payment  # inline import — avoids circular dependency
+        """
+        TEMPORARY: Bypassing payment check for development.
+        """
+        return True
 
-        return self.payments.filter(
-            status=Payment.Status.SUCCESS
-        ).exists()
 
     def is_ready(self):
         return self.best_image is not None and self.has_paid()

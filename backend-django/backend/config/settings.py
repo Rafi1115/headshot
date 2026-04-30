@@ -17,23 +17,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 import os
 from dotenv import load_dotenv
+from decouple import config
 
 load_dotenv()
 
 # ──────────────────────────────────────────────────────────────────────────
-# CORS / CSRF / Cookie settings (session auth with Next.js on :3000) _______
+# CORS / CSRF / Cookie settings (session auth with Next.js) ________________
 # ──────────────────────────────────────────────────────────────────────────
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
 
-# CSRF must trust the Next.js origin so cross-origin POSTs work
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# Load origins from environment or default to localhost for dev
+env_origins = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3005,http://127.0.0.1:3005").split(",")
+CORS_ALLOWED_ORIGINS = env_origins
+CSRF_TRUSTED_ORIGINS = env_origins
 
 # Lax is fine for same-site localhost; switch to None + Secure in production
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -57,7 +53,6 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 # feat: 10.0.1 - Email Config
-from decouple import config
 
 EMAIL_HOST = config("EMAIL_HOST")
 EMAIL_PORT = config("EMAIL_PORT", cast=int)
@@ -98,6 +93,7 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*").split(",")
 
 FRONTEND_BASE_URL = config("FRONTEND_BASE_URL")
 STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY")
+print(f"DEBUG: STRIPE_SECRET_KEY loaded: {STRIPE_SECRET_KEY[:10]}...")
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
 
 

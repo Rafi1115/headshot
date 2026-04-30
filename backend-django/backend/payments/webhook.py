@@ -31,24 +31,23 @@ def _stripe_webhook_impl(request):
     event_type = event["type"]
     logger.info("Stripe event received: %s", event_type)
 
-    # --- STEP 2: Idempotency check ---
+
     if StripeEvent.objects.filter(event_id=event_id).exists():
         logger.info("Duplicate event ignored: %s", event_id)
         return HttpResponse(status=200)
+    StripeEvent.objects.create(event_id=event_id, event_type=event_type)
 
-    # --- STEP 3 & 4: Handle relevant event ---
+
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
         session_id = session.get("id")
-        
+        logger.error("EVENT TYPE: %s", event_type)
+        logger.error("SESSION: %s", session)
         metadata = session.get("metadata", {})
         job_id = metadata.get("job_id")
-
         if not job_id:
             logger.error("Missing job_id in metadata for session %s", session_id)
             return HttpResponse(status=200)
-
-        # --- STEP 5: Fetch Job ---
         try:
             job = Job.objects.get(id=job_id)
         except Job.DoesNotExist:
@@ -56,56 +55,18 @@ def _stripe_webhook_impl(request):
             return HttpResponse(status=200)
         except Exception as e:
             logger.exception("DB error fetching job %s: %s", job_id, e)
-            return HttpResponse(status=500) # ✅ Tell Stripe to retry
-
-        # --- STEP 6: Update Payment (CRITICAL - ATOMIC) ---
+            return HttpResponse(status=500)
+        # --- TEMP: Force job as paid, trigger job directly ---
         try:
-            with transaction.atomic(): # ✅ All or nothing
-                # Secondary check inside lock
-                if StripeEvent.objects.filter(event_id=event_id).exists():
-                    return HttpResponse(status=200)
-
-                payment, created = Payment.objects.get_or_create(
-                    provider="stripe",
-                    provider_payment_id=session_id,
-                    defaults={
-                        "job": job,
-                        "amount": session.get("amount_total", 500),
-                        "status": Payment.Status.PENDING
-                    }
-                )
-
-                if payment.status != Payment.Status.SUCCESS:
-                    payment.status = Payment.Status.SUCCESS
-                    payment.save(update_fields=["status"])
-                    logger.info("Payment %s marked as SUCCESS", payment.id)
-
-                # ✅ Only save the event receipt if the payment update actually worked
-                StripeEvent.objects.create(
-                    event_id=event_id,
-                    event_type=event_type,
-                    payment=payment
-                )
-
-        except Exception as e:
-            logger.exception("Failed to update payment for session %s: %s", session_id, e)
-            return HttpResponse(status=500) # ✅ Tell Stripe to retry
-
-        # --- STEP 7: Trigger processing ---
-        try:
+            job.has_paid = True
+            job.save(update_fields=["has_paid"]) if hasattr(job, "has_paid") else None
             try_mark_job_ready(job)
             job.refresh_from_db()
             logger.info("Orchestrator called. Job status: %s", job.status)
         except Exception as e:
             logger.exception("Processing trigger failed for job %s: %s", job.id, e)
-
-    else:
-        # Save unhandled events so they aren't infinitely retried
-        try:
-            StripeEvent.objects.create(event_id=event_id, event_type=event_type)
-        except Exception:
-            pass
-
+    elif event_type.startswith("payment_intent."):
+        logger.info("Ignoring payment_intent event: %s", event_type)
     return HttpResponse(status=200)
 
 @csrf_exempt

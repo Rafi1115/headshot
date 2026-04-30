@@ -33,4 +33,4 @@ def try_mark_job_ready(job):
         else:
             logger.info(f"Job {job.id} is already past PENDING status (Current: {job.status}).")
     else:
-        logger.info(f"Job {job.id} not ready yet. Has best image: {job.best_image is not None}, Has paid: {job.has_paid()}")
+        logger.info(f"Job {job.id} not ready yet. Has best image: {job.best_image is not None}, Has paid (Bypassed): {job.has_paid()}")

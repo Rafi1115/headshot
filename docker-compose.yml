@@ -1,12 +1,12 @@
-
 services:
   frontend:
     build:
       context: ./frontend
       args:
+        # This is critical: NEXT_PUBLIC_ variables must be set at build time
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     ports:
-      - "3000:80"
+      - "3005:80"
     depends_on:
       - backend
     restart: always
@@ -14,18 +14,17 @@ services:
   backend:
     build:
       context: ./backend-django
-    command: python manage.py runserver 0.0.0.0:8000
+    # Runs migrations then starts server to match user's CLI workflow
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     ports:
       - "8000:8000"
     env_file:
       - ./backend-django/backend/.env
+      - .env # Override with root .env if present
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - ALLOWED_HOSTS=*
     volumes:
       - ./backend-django/backend:/app
-      - ./backend-django/backend/db.sqlite3:/app/db.sqlite3
-      - ./backend-django/backend/media:/app/media
       - deepface_weights:/root/.deepface/weights
     depends_on:
       - redis
@@ -34,16 +33,15 @@ services:
   celery:
     build:
       context: ./backend-django
-    command: celery -A config worker -l info
+    # Matching user's CLI: --pool=solo
+    command: celery -A config worker -l info --pool=solo
     env_file:
       - ./backend-django/backend/.env
+      - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
-      - ALLOWED_HOSTS=*
     volumes:
       - ./backend-django/backend:/app
-      - ./backend-django/backend/db.sqlite3:/app/db.sqlite3
-      - ./backend-django/backend/media:/app/media
       - deepface_weights:/root/.deepface/weights
     depends_on:
       - redis
@@ -52,7 +50,16 @@ services:
 
   redis:
     image: redis:alpine
-    # Removed external port mapping to prevent collision with local Redis
+    restart: always
+
+  stripe:
+    image: stripe/stripe-cli
+    command: listen --forward-to backend:8000/payments/webhook/
+    env_file:
+      - ./backend-django/backend/.env
+      - .env
+    depends_on:
+      - backend
     restart: always
 
 volumes:
