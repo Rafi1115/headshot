@@ -4,30 +4,32 @@ services:
       context: ./frontend
       args:
         # This is critical: NEXT_PUBLIC_ variables must be set at build time
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8005}
     ports:
       - "3005:80"
     depends_on:
       - backend
+    networks:
+      - app-network
     restart: always
 
   backend:
     build:
       context: ./backend-django
     # Runs migrations then starts server to match user's CLI workflow
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8005"
     ports:
-      - "8000:8000"
+      - "8005:8005"
     env_file:
       - ./backend-django/backend/.env
       - .env # Override with root .env if present
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
     volumes:
       - ./backend-django/backend:/app
       - deepface_weights:/root/.deepface/weights
     depends_on:
       - redis
+    networks:
+      - app-network
     restart: always
 
   celery:
@@ -38,29 +40,38 @@ services:
     env_file:
       - ./backend-django/backend/.env
       - .env
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
     volumes:
       - ./backend-django/backend:/app
       - deepface_weights:/root/.deepface/weights
     depends_on:
       - redis
       - backend
+    networks:
+      - app-network
     restart: always
 
   redis:
     image: redis:alpine
+    networks:
+      - app-network
     restart: always
 
   stripe:
     image: stripe/stripe-cli
-    command: listen --forward-to backend:8000/payments/webhook/
+    command: listen --forward-to backend:8005/payments/webhook/
     env_file:
       - ./backend-django/backend/.env
       - .env
     depends_on:
       - backend
+    networks:
+      - app-network
     restart: always
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   deepface_weights:
+
