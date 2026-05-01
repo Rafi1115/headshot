@@ -3,7 +3,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 User = get_user_model()
 
@@ -14,7 +14,7 @@ User = get_user_model()
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CsrfView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
         return Response({"detail": "CSRF cookie set"})
@@ -26,7 +26,7 @@ class CsrfView(APIView):
 # ─────────────────────────────────────────────────────────────────────────────
 class AdminLoginView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def post(self, request):
         email = request.data.get("email", "").strip()

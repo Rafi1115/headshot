@@ -79,6 +79,9 @@ export interface ChangePasswordData {
 }
 
 export async function changePassword(data: ChangePasswordData): Promise<void> {
+    // Ensure csrftoken is present even after hard refresh or expired browser cookies.
+    await fetchCsrf();
+
     const res = await fetch(`${API}/auth/change-password/`, {
         method: "POST",
         credentials: "include",
@@ -91,6 +94,9 @@ export async function changePassword(data: ChangePasswordData): Promise<void> {
 
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        if (res.status === 401 || res.status === 403) {
+            throw new Error(body.error ?? "Session expired. Please sign in again.");
+        }
         throw new Error(body.error ?? "Failed to update password.");
     }
 }

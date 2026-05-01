@@ -13,7 +13,7 @@ from jobs.tasks import process_job
 from jobs.orchestrator import try_mark_job_ready
 
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 class DeleteAllJobsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -28,6 +28,8 @@ class DeleteAllJobsView(APIView):
 
 
 class CreateJobView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
         email = request.data.get('email')
         if not email:
@@ -39,6 +41,8 @@ class CreateJobView(APIView):
 
 
 class UploadImageView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request, job_id):
         try:
             job = Job.objects.get(id=job_id)  # Retriving the job using job_id
@@ -87,6 +91,8 @@ class UploadImageView(APIView):
 
 
 class JobStatusView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, job_id):
         try:
             job = Job.objects.get(id=job_id)
@@ -112,6 +118,8 @@ class JobStatusView(APIView):
 
 
 class TrackView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
         from analytics.models import Analytics
         from django.db.models import F
