@@ -4,9 +4,9 @@ services:
       context: ./frontend
       args:
         # This is critical: NEXT_PUBLIC_ variables must be set at build time
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8005}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8006}
     ports:
-      - "3005:80"
+      - "3006:80"
     depends_on:
       - backend
     networks:
@@ -17,9 +17,9 @@ services:
     build:
       context: ./backend-django
     # Runs migrations then starts server to match user's CLI workflow
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8005"
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8006"
     ports:
-      - "8005:8005"
+      - "8006:8006"
     env_file:
       - ./backend-django/backend/.env
       - .env # Override with root .env if present
@@ -52,18 +52,6 @@ services:
 
   redis:
     image: redis:alpine
-    networks:
-      - app-network
-    restart: always
-
-  stripe:
-    image: stripe/stripe-cli
-    command: listen --forward-to backend:8005/payments/webhook/
-    env_file:
-      - ./backend-django/backend/.env
-      - .env
-    depends_on:
-      - backend
     networks:
       - app-network
     restart: always

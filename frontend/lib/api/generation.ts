@@ -55,19 +55,6 @@ export async function uploadImages(jobId: number, images: string[]): Promise<voi
   }
 }
 
-export async function createCheckoutSession(jobId: number): Promise<{ checkout_url: string }> {
-  const response = await fetch(`${API_BASE_URL}/payments/checkout/${jobId}/`, {
-    method: "POST",
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to create checkout session");
-  }
-
-  return response.json();
-}
-
 export async function getJobStatus(jobId: number): Promise<{ id: number, status: string, payment_status: string }> {
   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/`, {
     method: "GET",

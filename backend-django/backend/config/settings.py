@@ -27,7 +27,7 @@ load_dotenv()
 CORS_ALLOW_CREDENTIALS = True
 
 # Load origins from environment or default to localhost for dev
-env_origins = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3005,http://127.0.0.1:3005").split(",")
+env_origins = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3006,http://127.0.0.1:3006").split(",")
 CORS_ALLOWED_ORIGINS = env_origins
 CSRF_TRUSTED_ORIGINS = env_origins
 
@@ -92,9 +92,6 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*").split(",")
 
 FRONTEND_BASE_URL = config("FRONTEND_BASE_URL")
-STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY")
-print(f"DEBUG: STRIPE_SECRET_KEY loaded: {STRIPE_SECRET_KEY[:10]}...")
-STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET")
 
 
 # Application definition

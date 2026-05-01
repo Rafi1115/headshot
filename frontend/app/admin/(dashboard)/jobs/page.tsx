@@ -108,7 +108,7 @@ export default function JobsDashboard() {
               <p className="text-xs font-medium text-muted-foreground">Job #{job.id}</p>
               <h3 className="text-base font-semibold text-foreground">{job.email}</h3>
               <p className="break-all text-sm text-muted-foreground capitalize">
-                Status: {job.status} • Payment: {job.payment}
+                Status: {job.status}
               </p>
             </div>
             <div className="mt-3">
@@ -147,9 +147,6 @@ export default function JobsDashboard() {
                 <th className="w-20 border border-border px-2 text-left text-base leading-normal font-medium text-primary-foreground lg:text-[20px]">
                   Status
                 </th>
-                <th className="w-20 border border-border px-2 text-left text-base leading-normal font-medium text-primary-foreground lg:text-[20px]">
-                  Payment
-                </th>
                 <th className="w-24 border border-border px-2 text-left text-base leading-normal font-medium text-primary-foreground lg:text-[20px]">
                   Created
                 </th>
@@ -169,9 +166,6 @@ export default function JobsDashboard() {
                   </td>
                   <td className="border border-border px-2 text-sm leading-6 font-normal text-muted-foreground capitalize lg:text-[16px]">
                     {job.status}
-                  </td>
-                  <td className="border border-border px-2 text-sm leading-6 font-normal text-muted-foreground capitalize lg:text-[16px]">
-                    {job.payment}
                   </td>
                   <td className="border border-border px-2 text-sm leading-6 font-normal text-muted-foreground lg:text-[16px]">
                     {job.created}
@@ -249,7 +243,6 @@ export default function JobsDashboard() {
                 <div><strong className="text-foreground">Job ID:</strong> <span className="text-muted-foreground">{selectedJob.id}</span></div>
                 <div><strong className="text-foreground">Email:</strong> <span className="text-muted-foreground">{selectedJob.email}</span></div>
                 <div><strong className="text-foreground">Status:</strong> <span className="text-muted-foreground capitalize">{selectedJob.status}</span></div>
-                <div><strong className="text-foreground">Payment:</strong> <span className="text-muted-foreground capitalize">{selectedJob.payment}</span></div>
                 <div><strong className="text-foreground">Created:</strong> <span className="text-muted-foreground">{selectedJob.created}</span></div>
               </div>
 

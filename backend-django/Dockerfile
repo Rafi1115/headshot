@@ -33,8 +33,8 @@ COPY backend/ /app/
 RUN mkdir -p /root/.deepface/weights /app/media /app/staticfiles && \
     chmod -R 755 /app/media /app/staticfiles
 
-EXPOSE 8005
+EXPOSE 8006
 
 # Default command (can be overridden in docker-compose)
 # Using sh -c to run multiple commands: migrations then gunicorn
-CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8005"]
+CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8006"]
