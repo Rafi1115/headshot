@@ -39,11 +39,7 @@ class Job(models.Model):
         return self.images.filter(type="INPUT").exists()
 
     def has_paid(self):
-        """
-        TEMPORARY: Bypassing payment check for development.
-        """
-        return True
-
+        return self.payments.filter(status="SUCCESS").exists()
 
     def is_ready(self):
         return self.best_image is not None and self.has_paid()
