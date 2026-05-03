@@ -6,7 +6,7 @@ services:
         # This is critical: NEXT_PUBLIC_ variables must be set at build time
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8009}
     ports:
-      - "3006:80"
+      - "3009:80"
     depends_on:
       - backend
     networks:

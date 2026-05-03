@@ -43,7 +43,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Load origins from environment or default to localhost for dev
-env_origins = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3006,http://127.0.0.1:3006").split(",")
+env_origins = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3009,http://127.0.0.1:3009").split(",")
 CORS_ALLOWED_ORIGINS = env_origins
 CSRF_TRUSTED_ORIGINS = env_origins
 
