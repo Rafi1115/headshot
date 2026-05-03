@@ -1,17 +1,21 @@
 import { PaymentDashboardData } from "../../types/payment";
+const API_BASE_URL = ((globalThis as any).process?.env?.NEXT_PUBLIC_API_URL as string) || "http://72.62.248.97:8009";
 
-const API_BASE_URL = ((globalThis as any).process?.env?.NEXT_PUBLIC_API_URL as string) || "http://localhost:8009";
+function getCookie(name: string): string {
+  const v = `; ${document.cookie}`;
+  const parts = v.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()!.split(";").shift() ?? "";
+  return "";
+}
 
 export async function fetchPaymentDashboard(): Promise<PaymentDashboardData> {
   const response = await fetch(`${API_BASE_URL}/payments/dashboard/`, {
     credentials: "include",
   });
-
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || errorData.detail || "Failed to fetch payment dashboard data");
   }
-
   return response.json();
 }
 
@@ -20,14 +24,13 @@ export async function createCheckoutSession(jobId: number): Promise<{ checkout_u
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken"),
     },
     credentials: "include",
   });
-
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || errorData.detail || "Failed to create checkout session");
   }
-
   return response.json();
 }
