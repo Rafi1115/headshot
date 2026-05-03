@@ -1,6 +1,6 @@
 import { PaymentDashboardData } from "../../types/payment";
 
-const API_BASE_URL = ((globalThis as any).process?.env?.NEXT_PUBLIC_API_URL as string) || "http://localhost:8000";
+const API_BASE_URL = ((globalThis as any).process?.env?.NEXT_PUBLIC_API_URL as string) || "http://localhost:8006";
 
 export async function fetchPaymentDashboard(): Promise<PaymentDashboardData> {
   const response = await fetch(`${API_BASE_URL}/payments/dashboard/`, {

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-
+@method_decorator(csrf_exempt, name='dispatch')
 class CreateCheckoutSessionView(APIView):
     permission_classes = [AllowAny]
 
