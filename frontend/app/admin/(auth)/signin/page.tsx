@@ -41,7 +41,7 @@ export default function Signin() {
                     <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[#3b82f6]">
                         <Sparkles className="h-6 w-6 text-white" />
                     </div>
-                    <h1 className="text-xl font-bold tracking-tight text-white">
+                    <h1 className="text-xl font-bold tracking-tight text-black/90 flex items-center gap-1">
                         HeadshotAI <span className="text-[#3b82f6] font-medium text-base ml-1">Admin</span>
                     </h1>
                 </div>

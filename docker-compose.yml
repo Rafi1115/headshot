@@ -21,8 +21,7 @@ services:
     ports:
       - "8006:8006"
     env_file:
-      - ./backend-django/backend/.env
-      - .env # Override with root .env if present
+      - .env
     volumes:
       - ./backend-django/backend:/app
       - deepface_weights:/root/.deepface/weights

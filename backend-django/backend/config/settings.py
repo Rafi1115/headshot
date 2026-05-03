@@ -19,7 +19,7 @@ import os
 from dotenv import load_dotenv
 from decouple import config
 
-load_dotenv()
+load_dotenv('../../../.env')
 
 # ──────────────────────────────────────────────────────────────────────────
 # CORS / CSRF / Cookie settings (session auth with Next.js) ________________
@@ -54,9 +54,11 @@ CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False
 
 # DRF — use session auth so cookies are respected
+
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "DEFAULT_PERMISSION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
 }
 # ──────────────────────────────────────────────────────────────────────────
 

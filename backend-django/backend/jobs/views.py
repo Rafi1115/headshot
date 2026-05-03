@@ -12,6 +12,8 @@ from services.validator_instance import get_validator
 from jobs.tasks import process_job
 from jobs.orchestrator import try_mark_job_ready
 
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
@@ -27,6 +29,7 @@ class DeleteAllJobsView(APIView):
 
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CreateJobView(APIView):
     permission_classes = [AllowAny]
 
@@ -39,7 +42,7 @@ class CreateJobView(APIView):
         return Response({"job_id": job.id}, status=status.HTTP_201_CREATED)
 
 
-
+@method_decorator(csrf_exempt, name='dispatch')
 class UploadImageView(APIView):
     permission_classes = [AllowAny]
 
@@ -90,6 +93,7 @@ class UploadImageView(APIView):
         })
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class JobStatusView(APIView):
     permission_classes = [AllowAny]
 
