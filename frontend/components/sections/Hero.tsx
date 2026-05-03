@@ -24,6 +24,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { createJob, uploadImages } from "@/lib/api/generation";
+import { createCheckoutSession } from "@/lib/api/payments";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address.");
@@ -77,8 +78,9 @@ export default function Hero() {
       // 2. Upload Images
       await uploadImages(job_id, images);
 
-      // 3. Redirect to success page
-      window.location.href = `/success?job_id=${job_id}`;
+      // 3. Create Stripe Checkout session and redirect the user
+      const checkout = await createCheckoutSession(job_id);
+      window.location.href = checkout.checkout_url;
 
     } catch (error: any) {
       setErrorMessage(error.message || "An error occurred while processing your request.");

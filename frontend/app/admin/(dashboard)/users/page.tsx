@@ -50,7 +50,7 @@ export default function UsersPage() {
             <section className="w-full h-full">
                 <div className="dashboard-page-header">
                     <h1 className="dashboard-page-title">Users</h1>
-                    <p className="dashboard-page-subtitle">Manage your users and system configuration.</p>
+                    <p className="dashboard-page-subtitle">Manage your useddrs and system configuration.</p>
                 </div>
 
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">

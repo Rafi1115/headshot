@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Menu, Settings, User, Briefcase, LogOut, Sparkles } from "lucide-react";
+import { LayoutGrid, Menu, Settings, User, Briefcase, CreditCard, LogOut, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -18,7 +18,8 @@ function SidebarNav() { // This component is used in both the mobile sheet and t
     const navItems = [
         { label: "Dashboard", href: "/admin", icon: LayoutGrid },
         { label: "Jobs", href: "/admin/jobs", icon: Briefcase },
-        { label: "Users", href: "/admin/users", icon: User },
+        { label: "Payments", href: "/admin/payments", icon: CreditCard },
+        // { label: "Users", href: "/admin/users", icon: User },
         { label: "Settings", href: "/admin/settings", icon: Settings },
     ];
 

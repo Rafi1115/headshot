@@ -5,9 +5,31 @@ import { CheckCircle2, Mail, ArrowRight, ShieldCheck, Zap, Sparkles } from "luci
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
+import { getJobStatus } from "@/lib/api/generation";
 
 export default function SuccessPage() {
   const [mounted, setMounted] = useState(false);
+  const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("job_id");
+    if (id) {
+      setJobId(id);
+      getJobStatus(Number(id))
+        .then((data) => {
+          setJobStatus(data.status);
+          setPaymentStatus(data.payment_status);
+        })
+        .catch(() => {
+          setJobStatus(null);
+          setPaymentStatus(null);
+        });
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -58,7 +80,14 @@ export default function SuccessPage() {
         </h1>
         <p className="mb-10 text-lg text-muted-foreground max-w-md mx-auto">
           Thank you for your purchase. Our AI systems are now training on your photos to generate your professional headshots.
+          {jobId ? ` Job #${jobId}` : ""}
         </p>
+        {paymentStatus && (
+          <div className="mb-6 rounded-2xl border border-border bg-muted/30 p-4 text-sm text-foreground">
+            Payment Status: <span className="font-semibold">{paymentStatus}</span>
+            {paymentStatus !== "PAID" ? " — confirmation may take a moment." : ""}
+          </div>
+        )}
 
         {/* What Happens Next Section */}
         <div className="mb-12 grid gap-6 sm:grid-cols-2 text-left">
