@@ -1,6 +1,6 @@
 import { TrafficPoint } from "@/types/traffic";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8006";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8009";
 
 const mockTraffic: TrafficPoint[] = [
   { month: "Jan", value: 1100 },

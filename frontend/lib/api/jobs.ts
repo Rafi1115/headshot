@@ -1,6 +1,6 @@
 import { Job } from "@/types/job";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8006";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8009";
 
 export async function fetchJobs(): Promise<Job[]> {
 
