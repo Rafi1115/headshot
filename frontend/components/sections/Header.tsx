@@ -72,17 +72,11 @@ export default function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden items-center gap-3 lg:flex">
-            <Link
-              href="/login"
-              className="rounded-lg px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Log in
-            </Link>
             <Button
-              asChild
               className="bg-primary text-primary-foreground shadow-none transition-all hover:bg-primary/90"
+              onClick={() => window.location.reload()}
             >
-              <Link href="/get-started">Get Started</Link>
+              Get Started
             </Button>
           </div>
 
@@ -118,18 +112,12 @@ export default function Header() {
               ))}
             </ul>
             <div className="mt-4 flex flex-col gap-2 border-t border-border/50 pt-4">
-              <Link
-                href="/login"
-                className="block rounded-xl px-4 py-3 text-center text-base font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                Log in
-              </Link>
               <Button
-                asChild
                 size="lg"
                 className="w-full bg-primary text-primary-foreground"
+                onClick={() => window.location.reload()}
               >
-                <Link href="/get-started">Get Started</Link>
+                Get Started
               </Button>
             </div>
           </div>
