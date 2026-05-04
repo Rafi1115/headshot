@@ -101,6 +101,9 @@ def stripe_webhook(request):
             return HttpResponse(status=200)
 
         try:
+            if job.status == "FAILED" and job.best_image:
+                job.status = "PENDING"
+                job.save()
             from jobs.orchestrator import try_mark_job_ready
             try_mark_job_ready(job)
             print(f"[WEBHOOK] orchestrator done")

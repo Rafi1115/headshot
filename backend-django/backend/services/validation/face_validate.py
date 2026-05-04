@@ -18,7 +18,7 @@ class ImageValidator:
 
         options = FaceDetectorOptions(
             base_options=BaseOptions(model_asset_path=model_asset_path),
-            min_detection_confidence=0.6
+            min_detection_confidence=0.3
         )
 
         self.detector = FaceDetector.create_from_options(options)
