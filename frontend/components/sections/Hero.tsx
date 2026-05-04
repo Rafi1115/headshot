@@ -100,8 +100,25 @@ export default function Hero() {
   }, []);
 
 
-  function handleFiles(files: File[]) { // Convert files to data URLs for preview
-    const readers = files.map(file => {
+  function handleFiles(files: File[]) {
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    const validFiles = files.filter(file => {
+      if (!allowedTypes.includes(file.type)) {
+        setErrorMessage(`"${file.name}" is not supported. Please upload JPG or PNG only.`);
+        return false;
+      }
+      if (file.size > maxSize) {
+        setErrorMessage(`"${file.name}" is too large. Max file size is 10MB.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    const readers = validFiles.map(file => {
       return new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -109,7 +126,8 @@ export default function Hero() {
         reader.readAsDataURL(file);
       });
     });
-    Promise.all(readers).then(imgs => { // Once all files are read, update the images state with the new previews
+
+    Promise.all(readers).then(imgs => {
       setImages(prev => [...prev, ...imgs]);
     });
   }
@@ -288,12 +306,12 @@ export default function Hero() {
                         Upload Your Photo
                       </h3>
                       <p className={`mt-1 text-sm transition-colors ${isDragging ? "text-primary" : "text-muted-foreground"}`}>
-                        {isDragging ? "Drop image(s) here" : "Drag and drop or click to upload"}
+                        {isDragging ? "Drop image(s) here" : "Drag and drop or click to upload. JPG/PNG only, max 10MB. Use a clear solo photo with your face visible."}
                       </p>
 
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/jpg,image/png"
                         multiple
                         ref={fileInputRef}
                         style={{ display: 'none' }}
