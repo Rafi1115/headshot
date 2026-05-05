@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 MAX_IMAGE_DIM = 1024   # Resize any image larger than this before detection
-MIN_FACE_SIZE = 60     # Reject faces smaller than 60px (too small to analyze)
+MIN_FACE_SIZE = 40     # was 60 — now accepts smaller/further away faces
 
 
 class ImageValidator:
@@ -18,7 +18,7 @@ class ImageValidator:
 
         options = FaceDetectorOptions(
             base_options=BaseOptions(model_asset_path=model_asset_path),
-            min_detection_confidence=0.3
+            min_detection_confidence=0.2  # was 0.3 — more aggressive face detection
         )
 
         self.detector = FaceDetector.create_from_options(options)
@@ -52,7 +52,9 @@ class ImageValidator:
     # --------------------------------------------------
     # 📸 Blur Detection (adaptive threshold based on face size)
     # --------------------------------------------------
-    def _is_blurry(self, face_crop, base_threshold=80):
+    def _is_blurry(self, face_crop, base_threshold=45):
+        # was 80 — now only rejects genuinely unusable blurry photos
+        # Normal selfies and phone photos typically score 50-200+
         if face_crop.size == 0:
             return True
 
