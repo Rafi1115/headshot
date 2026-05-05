@@ -4,6 +4,9 @@ Feat: v15.2.0- This new Celery task validates and scores uploaded images asynchr
 
 jobs/tasks.py
 Feat: version 5.0.1 - Implemented Celery task for processing jobs asynchronously. This task retrieves a job by its ID, updates its status to "PROCESSING", runs the pipeline (which includes validation, analysis, and generation), and then updates the job status to "COMPLETED" or "FAILED" based on the outcome. This enhancement allows for efficient handling of long-running tasks without blocking the main application thread, improving overall performance and user experience.
+
+Feat: v16.0.0 - Descriptive per-image rejection reasons are now collected and surfaced
+in job.error_message so the frontend can show the user exactly why their photos failed.
 """
 import logging
 from celery import shared_task
@@ -12,7 +15,6 @@ from images.models import Image
 from services.email.email_service import send_results_email
 
 from django.db import transaction
-# Import run_pipeline here to avoid circular imports
 from services.pipeline import run_pipeline
 from services.validator_instance import get_validator
 from services.score.scoring import score_image
@@ -23,6 +25,7 @@ def validate_and_score_images(job_id):
     # Deletes invalid images.
     # Scores valid images and selects the best one.
     # Updates job.best_image or marks job as FAILED if none valid.
+    # feat: v16.0.0 - Collects per-image rejection reasons for frontend display.
     logger = logging.getLogger(__name__)
 
     with transaction.atomic():
@@ -44,24 +47,47 @@ def validate_and_score_images(job_id):
                 valid = False
                 msg = str(e)
                 face_info = None
+
             if not valid:
                 rejected_images.append({"file": img.file.name, "reason": msg})
                 img.delete()
                 continue
+
             try:
                 score = score_image(img.file.path, face_info)
             except Exception as e:
                 logger.error(f"[VALIDATE] Error scoring {img.file.name}: {e}")
                 score = 0
+
             img.score = score
             img.save()
             valid_images.append(img)
 
         if not valid_images:
             job.status = Job.Status.FAILED
-            job.error_message = "All images failed validation"
+
+            # feat: v16.0.0 — Build a descriptive error from per-image rejection reasons
+            # Strip the "Validation failed: " prefix so frontend gets clean reasons
+            reasons = []
+            for r in rejected_images:
+                reason = r["reason"]
+                reason = reason.replace("Validation failed: ", "").replace("validation failed: ", "")
+                reasons.append(reason)
+
+            if reasons:
+                # Deduplicate while preserving order
+                seen = set()
+                unique_reasons = []
+                for r in reasons:
+                    if r not in seen:
+                        seen.add(r)
+                        unique_reasons.append(r)
+                job.error_message = "Validation failed: " + "; ".join(unique_reasons[:3])
+            else:
+                job.error_message = "All images failed validation"
+
             job.save()
-            logger.warning(f"[VALIDATE] All images failed for job {job.id}")
+            logger.warning(f"[VALIDATE] All images failed for job {job.id}. Reasons: {reasons}")
             return
 
         # Select best image by score
@@ -70,7 +96,7 @@ def validate_and_score_images(job_id):
         job.best_image = best_image
         job.save()
         logger.info(f"[VALIDATE] Best image for job {job.id}: {best_image.file.name}")
-        
+
         # Trigger orchestrator to check if payment is also done and start processing
         from jobs.orchestrator import try_mark_job_ready
         try_mark_job_ready(job)
@@ -101,9 +127,6 @@ def process_job(self, job_id):
         if job.status in [Job.Status.COMPLETED]:
             logger.info(f"[PROCESS] Job {job.id} already completed. Skipping.")
             return
-        #  if job.payment_status != Job.PaymentStatus.PAID:
-        #     logger.info(f"[PROCESS] Job {job.id} not paid. Skipping.")
-        #     return
 
         job.status = Job.Status.PROCESSING
         job.save()
@@ -133,5 +156,4 @@ def process_job(self, job_id):
         job.error_message = str(e)
         job.save()
         logger.error(f"[PROCESS] Job {job.id} failed: {e}")
-        job.save()
         logger.error(f"[JOB {job.id}] Critical Failure: {e}")
