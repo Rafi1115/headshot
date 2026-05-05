@@ -55,7 +55,15 @@ export async function uploadImages(jobId: number, images: string[]): Promise<voi
   }
 }
 
-export async function getJobStatus(jobId: number): Promise<{ id: number, status: string, payment_status: string }> {
+export async function getJobStatus(jobId: number): Promise<{
+  id: number;
+  status: string;
+  payment_status: string;
+  best_image: string | null;
+  error: string | null;
+  input_images: string[];
+  output_images: string[];
+}> {
   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/`, {
     method: "GET",
   });
