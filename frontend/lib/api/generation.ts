@@ -2,14 +2,11 @@
 
 const API_BASE_URL = ((globalThis as any).process?.env?.NEXT_PUBLIC_API_URL as string) || "http://72.62.248.97:8009";
 
-export async function createJob(email: string): Promise<{ job_id: number }> {
-
+export async function createJob(email: string, package_type: string = "INSTANT"): Promise<{ job_id: number }> {
   const response = await fetch(`${API_BASE_URL}/jobs/create/`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, package: package_type }),
   });
 
   if (!response.ok) {

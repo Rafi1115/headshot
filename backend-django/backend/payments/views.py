@@ -12,8 +12,19 @@ from jobs.models import Job
 from .models import Payment
 
 logger = logging.getLogger(__name__)
-
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
+# Package prices in cents
+PACKAGE_PRICES = {
+    "INSTANT": 1900,  # $19
+    "PRO":     4900,  # $49
+}
+
+PACKAGE_NAMES = {
+    "INSTANT": "Instant Headshots (5-10 photos)",
+    "PRO":     "Pro Headshots (20-40 photos)",
+}
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CreateCheckoutSessionView(APIView):
@@ -28,6 +39,10 @@ class CreateCheckoutSessionView(APIView):
         if job.has_paid():
             return Response({"error": "Job already paid"}, status=400)
 
+        package = job.package
+        price_amount = PACKAGE_PRICES.get(package, PACKAGE_PRICES["INSTANT"])
+        package_name = PACKAGE_NAMES.get(package, "AI Headshot Generation")
+
         try:
             session = stripe.checkout.Session.create(
                 payment_method_types=["card"],
@@ -35,10 +50,10 @@ class CreateCheckoutSessionView(APIView):
                 line_items=[{
                     "price_data": {
                         "currency": "usd",
-                        "unit_amount": int(settings.STRIPE_PRICE_AMOUNT),
+                        "unit_amount": price_amount,
                         "product_data": {
-                            "name": "AI Headshot Generation",
-                            "description": "Professional AI-generated headshots",
+                            "name": package_name,
+                            "description": f"Professional AI-generated headshots — {package} package",
                         },
                     },
                     "quantity": 1,
@@ -48,7 +63,6 @@ class CreateCheckoutSessionView(APIView):
                 success_url=f"{settings.FRONTEND_BASE_URL}/success?job_id={job.id}",
                 cancel_url=f"{settings.FRONTEND_BASE_URL}/cancel?job_id={job.id}",
             )
-
             return Response({"checkout_url": session.url, "session_id": session.id})
 
         except stripe.StripeError as e:
@@ -59,7 +73,6 @@ class CreateCheckoutSessionView(APIView):
 @csrf_exempt
 def stripe_webhook(request):
     payload = request.body
-    
     try:
         event = stripe.Event.construct_from(
             __import__('json').loads(payload), stripe.api_key
@@ -69,33 +82,30 @@ def stripe_webhook(request):
         return HttpResponse(status=400)
 
     print(f"[WEBHOOK] Event: {event['type']}")
-    
+
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         metadata = session.metadata or {}
         job_id = metadata.get("job_id") if hasattr(metadata, 'get') else getattr(metadata, 'job_id', None)
-        print(f"[WEBHOOK] job_id={job_id}")
 
         if not job_id:
             return HttpResponse(status=200)
 
         try:
             job = Job.objects.get(id=job_id)
-            print(f"[WEBHOOK] job found: {job.status}")
         except Job.DoesNotExist:
             return HttpResponse(status=200)
 
         try:
             Payment.objects.get_or_create(
                 provider="stripe",
-                provider_payment_id=session.id,  
+                provider_payment_id=session.id,
                 defaults={
                     "job": job,
-                    "amount": session.amount_total or 0, 
+                    "amount": session.amount_total or 0,
                     "status": Payment.Status.SUCCESS,
                 }
             )
-            print(f"[WEBHOOK] payment saved")
         except Exception as e:
             print(f"[WEBHOOK] payment error: {e}")
             return HttpResponse(status=200)
@@ -106,19 +116,15 @@ def stripe_webhook(request):
                 job.save()
             from jobs.orchestrator import try_mark_job_ready
             try_mark_job_ready(job)
-            print(f"[WEBHOOK] orchestrator done")
         except Exception as e:
             print(f"[WEBHOOK] orchestrator error: {e}")
 
     return HttpResponse(status=200)
 
 
-
-
 class AdminPaymentDashboardView(APIView):
 
     def get(self, request):
-        
         jobs = Job.objects.prefetch_related('payments').order_by('-created_at')
         data = []
         for job in jobs:
@@ -127,17 +133,14 @@ class AdminPaymentDashboardView(APIView):
             data.append({
                 "job_id": job.id,
                 "email": job.email,
+                "package": job.package,
                 "status": job.status,
                 "created_at": job.created_at.strftime("%Y-%m-%d %H:%M"),
                 "payment_status": "PAID" if job.has_paid() else "UNPAID",
-                "total_paid_amount": sum(p.amount for p in successful) / 100,  # cents to dollars
+                "total_paid_amount": sum(p.amount for p in successful) / 100,
                 "successful_payments": [
                     {"id": p.provider_payment_id, "amount": p.amount / 100, "date": p.created_at.strftime("%Y-%m-%d %H:%M")}
                     for p in successful
-                ],
-                "failed_payments": [
-                    {"id": p.provider_payment_id, "amount": p.amount / 100}
-                    for p in payments.filter(status="FAILED")
                 ],
             })
 

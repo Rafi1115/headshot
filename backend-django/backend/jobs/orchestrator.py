@@ -7,12 +7,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 def try_mark_job_ready(job):
-    """
-    Job Readiness Trigger — called after both image scoring and the payment webhook.
-    
-    This acts as the final gatekeeper before expensive AI generation begins.
-    It guarantees that we have both a valid scored image AND a successful payment.
-    """
     # STRICT GATE: Require the scoring task to finish (best_image is set) AND payment to be complete
     if job.best_image is not None and job.has_paid():
         

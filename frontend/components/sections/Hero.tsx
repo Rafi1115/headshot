@@ -1,27 +1,8 @@
-/**
- * Hero Component
- *
- * This is the main hero section for the landing page.
- *
- * Features:
- * - Headline, subheadline, and trust indicators
- * - Animated CTA button (pulse on click)
- * - Right column with drag-and-drop image upload and preview
- * - Upload area supports drag-and-drop and manual file selection
- * - Responsive layout for desktop and mobile
- * - Floating before/after headshot preview cards
- * - feat: v16.0.0 - Validation polling before payment. If images fail validation,
- *   user sees exact error and can re-upload. No payment = no money lost.
- *
- * Usage:
- * Place this component at the top of your main page to provide users with a welcoming introduction and an easy way to upload their photos for AI headshot transformation.
- */
-
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Upload, Shield, ArrowRight, Loader2, CheckCircle2, AlertCircle, X } from "lucide-react";
-import { useState, useCallback, useRef } from "react";
+import { Upload, Shield, ArrowRight, Loader2, CheckCircle2, AlertCircle, X, Zap, Crown } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { createJob, uploadImages, getJobStatus } from "@/lib/api/generation";
@@ -30,7 +11,34 @@ import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address.");
 
-// Maps raw validator messages to user-friendly text
+type Package = "INSTANT" | "PRO";
+
+const PACKAGE_CONFIG: Record<Package, {
+  label: string;
+  price: number;
+  maxInput: number;
+  outputRange: string;
+  icon: any;
+  description: string;
+}> = {
+  INSTANT: {
+    label: "Instant",
+    price: 19,
+    maxInput: 1,
+    outputRange: "5–10",
+    icon: Zap,
+    description: "Upload 1 photo, get 5–10 headshots",
+  },
+  PRO: {
+    label: "Pro",
+    price: 49,
+    maxInput: 5,
+    outputRange: "20–40",
+    icon: Crown,
+    description: "Upload up to 5 photos, get 20–40 headshots",
+  },
+};
+
 function friendlyValidationError(raw: string): string {
   if (!raw) return "Your photos didn't pass validation. Please upload clearer photos.";
   const lower = raw.toLowerCase();
@@ -42,16 +50,14 @@ function friendlyValidationError(raw: string): string {
     return "Your photo is too blurry. Please upload a sharper, clearer photo.";
   if (lower.includes("too small"))
     return "Your photo resolution is too low. Please upload a higher quality photo.";
-  if (lower.includes("image too small"))
-    return "Image dimensions are too small (min 100x100). Please use a larger photo.";
   return raw.replace("Validation failed: ", "").replace("validation failed: ", "");
 }
 
 export default function Hero() {
   const [isDragging, setIsDragging] = useState(false);
-  const [headshotBtn, setHeadshotBtn] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<Package>("INSTANT");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -61,14 +67,21 @@ export default function Hero() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const pkg = PACKAGE_CONFIG[selectedPackage];
+
+  // Read package selected from Pricing section
+  useEffect(() => {
+    const stored = localStorage.getItem("selected_package") as Package | null;
+    if (stored && (stored === "INSTANT" || stored === "PRO")) {
+      setSelectedPackage(stored);
+      localStorage.removeItem("selected_package");
+    }
+  }, []);
+
   const handleCancelUpload = () => {
     setImages([]);
     setSuccessMessage(null);
     setErrorMessage(null);
-  };
-
-  const handleGenerateAIHeadshot = () => {
-    setShowEmailModal(true);
   };
 
   const submitJob = async () => {
@@ -86,14 +99,14 @@ export default function Hero() {
     setErrorMessage(null);
 
     try {
-      // Step 1 — Create Job
+      // Step 1 — Create Job with package
       setGeneratingStep("uploading");
-      const { job_id } = await createJob(email);
+      const { job_id } = await createJob(email, selectedPackage);
 
       // Step 2 — Upload Images
       await uploadImages(job_id, images);
 
-      // Step 3 — Poll for validation result (max 60s, every 2s)
+      // Step 3 — Poll for validation (max 60s)
       setGeneratingStep("validating");
       let validated = false;
 
@@ -101,13 +114,11 @@ export default function Hero() {
         await new Promise((res) => setTimeout(res, 2000));
         const statusData = await getJobStatus(job_id);
 
-        // Validation passed — best_image is set
         if (statusData.best_image) {
           validated = true;
           break;
         }
 
-        // Validation explicitly failed
         if (statusData.status === "FAILED") {
           const raw = (statusData as any).error || "";
           setErrorMessage(friendlyValidationError(raw));
@@ -128,7 +139,7 @@ export default function Hero() {
       window.location.href = checkout.checkout_url;
 
     } catch (error: any) {
-      setErrorMessage(error.message || "An error occurred while processing your request.");
+      setErrorMessage(error.message || "An error occurred.");
       setIsGenerating(false);
     }
   };
@@ -146,8 +157,15 @@ export default function Hero() {
   function handleFiles(files: File[]) {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
     const maxSize = 10 * 1024 * 1024;
+    const maxInput = pkg.maxInput;
 
-    const validFiles = files.filter((file) => {
+    const remaining = maxInput - images.length;
+    if (remaining <= 0) {
+      setErrorMessage(`${pkg.label} plan allows max ${maxInput} photo(s). Remove some first.`);
+      return;
+    }
+
+    const validFiles = files.slice(0, remaining).filter((file) => {
       if (!allowedTypes.includes(file.type)) {
         setErrorMessage(`"${file.name}" is not supported. Please upload JPG or PNG only.`);
         return false;
@@ -161,17 +179,18 @@ export default function Hero() {
 
     if (validFiles.length === 0) return;
 
-    const readers = validFiles.map((file) => {
-      return new Promise<string>((resolve, reject) => {
+    const readers = validFiles.map((file) =>
+      new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(file);
-      });
-    });
+      })
+    );
 
     Promise.all(readers).then((imgs) => {
       setImages((prev) => [...prev, ...imgs]);
+      setErrorMessage(null);
     });
   }
 
@@ -180,7 +199,7 @@ export default function Hero() {
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
     if (files.length) handleFiles(files);
-  }, []);
+  }, [images, selectedPackage]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -189,28 +208,23 @@ export default function Hero() {
     }
   };
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleUploadClick = () => fileInputRef.current?.click();
 
-  const handleHeadshotClick = () => {
-    setHeadshotBtn(!headshotBtn);
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 400);
-  };
-
-  // Label shown on the spinner button based on current step
   const generatingLabel = {
     uploading: "Uploading photos...",
     validating: "Checking your photos...",
     redirecting: "Redirecting to payment...",
   }[generatingStep];
 
+  const InstantIcon = PACKAGE_CONFIG.INSTANT.icon;
+  const ProIcon = PACKAGE_CONFIG.PRO.icon;
+
   return (
-    <section className="relative min-h-screen overflow-hidden bg-transparent pt-28 pb-20 lg:pt-32">
+    <section id="hero-upload" className="relative min-h-screen overflow-hidden bg-transparent pt-28 pb-20 lg:pt-32">
       <div className="relative mx-auto max-w-6xl px-6 lg:px-8">
         <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-20">
-          {/* Left Column - Text Content */}
+
+          {/* Left Column */}
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-4 py-1.5 text-sm font-medium text-accent">
               <span className="flex h-2 w-2 rounded-full bg-accent animate-pulse" />
@@ -230,8 +244,12 @@ export default function Hero() {
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
               <Button
                 size="lg"
-                className={`bg-accent text-accent-foreground px-8 h-12 text-base font-medium transition-all hover:bg-accent/90 hover:glow-primary`}
-                onClick={handleHeadshotClick}
+                className="bg-accent text-accent-foreground px-8 h-12 text-base font-medium transition-all hover:bg-accent/90"
+                onClick={() => {
+                  setIsAnimating(true);
+                  setTimeout(() => setIsAnimating(false), 400);
+                  handleUploadClick();
+                }}
               >
                 Create Your Headshot
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -269,20 +287,17 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Right Column - Upload Interface */}
+          {/* Right Column - Upload Widget */}
           <div className={`relative ${isAnimating ? "animate-pulse-once" : ""}`}>
             <div
-              className={`relative rounded-2xl border bg-card p-8 shadow-lg transition-all duration-300 group ${
-                isDragging ? "border-primary ring-4 ring-primary/20 glow-primary" : "border-border hover:border-primary/30"
+              className={`relative rounded-2xl border bg-card p-8 shadow-lg transition-all duration-300 ${
+                isDragging ? "border-primary ring-4 ring-primary/20" : "border-border hover:border-primary/30"
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onDragEnter={handleDragOver}
               onDragEnd={handleDragLeave}
-              tabIndex={0}
-              aria-label="Upload your photo by clicking or dragging here"
-              style={{ cursor: "pointer" }}
             >
               {successMessage ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -291,64 +306,82 @@ export default function Hero() {
                   </div>
                   <h3 className="mb-2 text-2xl font-semibold text-foreground">You're all set!</h3>
                   <p className="text-muted-foreground">{successMessage}</p>
-                  <Button
-                    className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90"
-                    onClick={() => setSuccessMessage(null)}
-                  >
+                  <Button className="mt-8 bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => setSuccessMessage(null)}>
                     Create Another
                   </Button>
                 </div>
               ) : (
                 <>
-                  {/* Preview Grid */}
-                  <div className="mb-8">
-                    <div
-                      className={
-                        images.length > 3
-                          ? "flex gap-3 overflow-x-auto scrollbar-thin scrollbar-thumb-accent/40 scrollbar-track-transparent"
-                          : "grid grid-cols-3 gap-3"
-                      }
-                      style={{ WebkitOverflowScrolling: "touch" }}
-                    >
+                  {/* Package Selector */}
+                  <div className="mb-6 grid grid-cols-2 gap-2">
+                    {(["INSTANT", "PRO"] as Package[]).map((p) => {
+                      const config = PACKAGE_CONFIG[p];
+                      const Icon = config.icon;
+                      const isSelected = selectedPackage === p;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => {
+                            setSelectedPackage(p);
+                            setImages([]);
+                            setErrorMessage(null);
+                          }}
+                          className={`flex flex-col items-center rounded-xl border p-3 text-center transition-all ${
+                            isSelected
+                              ? "border-accent bg-accent/10 text-accent"
+                              : "border-border text-muted-foreground hover:border-accent/40"
+                          }`}
+                        >
+                          <Icon className="mb-1 h-4 w-4" />
+                          <span className="text-sm font-semibold">{config.label}</span>
+                          <span className="text-xs">${config.price} · {config.outputRange} shots</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Package description */}
+                  <div className="mb-4 rounded-lg bg-accent/5 border border-accent/20 px-3 py-2 text-center">
+                    <p className="text-xs text-accent font-medium">{pkg.description}</p>
+                  </div>
+
+                  {/* Image Preview Grid */}
+                  <div className="mb-6">
+                    <div className="grid grid-cols-3 gap-3">
                       {images.length > 0
                         ? images.map((img, idx) => (
-                            <div
-                              key={idx}
-                              className="aspect-square overflow-hidden rounded-xl bg-muted shrink-0"
-                              style={images.length > 3 ? { minWidth: 90, width: 90, maxWidth: 120 } : {}}
-                            >
+                            <div key={idx} className="aspect-square overflow-hidden rounded-xl bg-muted">
                               <Image src={img} alt={`Uploaded ${idx + 1}`} width={200} height={200} className="h-full w-full object-cover" />
                             </div>
                           ))
                         : [1, 2, 3].map((i) => (
                             <div key={i} className="aspect-square overflow-hidden rounded-xl bg-muted">
-                              <Image src={`/dummy-image-square.jpg`} alt={`Headshot style ${i}`} width={200} height={200} className="h-full w-full object-cover" />
+                              <Image src="/dummy-image-square.jpg" alt={`Headshot style ${i}`} width={200} height={200} className="h-full w-full object-cover" />
                             </div>
                           ))}
                     </div>
+                    {/* Upload count indicator */}
+                    {images.length > 0 && (
+                      <p className="mt-2 text-center text-xs text-muted-foreground">
+                        {images.length}/{pkg.maxInput} photo{pkg.maxInput > 1 ? "s" : ""} uploaded
+                      </p>
+                    )}
                   </div>
 
                   {/* Upload Area */}
                   <div className="text-center select-none">
-                    <div onClick={handleUploadClick}>
-                      <div
-                        className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 transition-all ${
-                          isDragging ? "scale-110 bg-primary/20" : ""
-                        }`}
-                      >
+                    <div onClick={handleUploadClick} className="cursor-pointer">
+                      <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 transition-all ${isDragging ? "scale-110 bg-primary/20" : ""}`}>
                         <Upload className={`h-6 w-6 transition-colors ${isDragging ? "text-primary" : "text-accent"}`} />
                       </div>
                       <h3 className="mt-4 text-lg font-semibold text-foreground">Upload Your Photo</h3>
                       <p className={`mt-1 text-sm transition-colors ${isDragging ? "text-primary" : "text-muted-foreground"}`}>
-                        {isDragging
-                          ? "Drop image(s) here"
-                          : "Drag and drop or click to upload. JPG/PNG only, max 10MB. Use a clear solo photo with your face visible."}
+                        {isDragging ? "Drop image(s) here" : `Drag and drop or click. JPG/PNG, max 10MB.`}
                       </p>
-
                       <input
                         type="file"
                         accept="image/jpeg,image/jpg,image/png"
-                        multiple
+                        multiple={selectedPackage === "PRO"}
                         ref={fileInputRef}
                         style={{ display: "none" }}
                         onChange={handleFileInputChange}
@@ -367,9 +400,9 @@ export default function Hero() {
                         <Button
                           size="lg"
                           className="flex-1 bg-primary text-primary-foreground font-medium hover:bg-primary/90"
-                          onClick={handleGenerateAIHeadshot}
+                          onClick={() => setShowEmailModal(true)}
                         >
-                          Generate AI Headshot
+                          Generate — ${pkg.price}
                         </Button>
                       </div>
                     ) : (
@@ -379,7 +412,7 @@ export default function Hero() {
                         onClick={handleUploadClick}
                       >
                         <Upload className="mr-2 h-4 w-4" />
-                        Select Photo
+                        Select Photo{selectedPackage === "PRO" ? "s" : ""}
                       </Button>
                     )}
 
@@ -397,7 +430,7 @@ export default function Hero() {
               <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-lg">
                 <div className="flex items-center gap-3">
                   <div className="relative h-10 w-10 overflow-hidden rounded-full">
-                    <Image src="/assets/comparison/Lovelace/before.jpg" alt="Before headshot" fill className="object-cover" />
+                    <Image src="/assets/comparison/Lovelace/before.jpg" alt="Before" fill className="object-cover" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Before</p>
@@ -411,7 +444,7 @@ export default function Hero() {
               <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-lg">
                 <div className="flex items-center gap-3">
                   <div className="relative h-10 w-10 overflow-hidden rounded-full">
-                    <Image src="/assets/comparison/Lovelace/after.png" alt="After headshot" fill className="object-cover" />
+                    <Image src="/assets/comparison/Lovelace/after.png" alt="After" fill className="object-cover" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">After</p>
@@ -429,18 +462,23 @@ export default function Hero() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-2xl border bg-card p-8 shadow-lg">
             <button
-              onClick={() => {
-                if (!isGenerating) setShowEmailModal(false);
-              }}
+              onClick={() => { if (!isGenerating) setShowEmailModal(false); }}
               className="absolute right-4 top-4 text-muted-foreground hover:text-foreground disabled:opacity-30"
               disabled={isGenerating}
             >
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="mb-2 text-2xl font-semibold tracking-tight">Where should we send your headshots?</h3>
+            <h3 className="mb-1 text-2xl font-semibold tracking-tight">Where should we send your headshots?</h3>
+
+            {/* Selected plan reminder */}
+            <div className="mt-2 mb-4 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-3 py-1 text-xs font-medium text-accent">
+              {selectedPackage === "PRO" ? <Crown className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+              {pkg.label} Plan — ${pkg.price} · {pkg.outputRange} headshots
+            </div>
+
             <p className="mb-6 text-sm text-muted-foreground">
-              Enter your email address to receive your high-quality AI generated professional portraits.
+              Enter your email to receive your AI-generated professional portraits as a ZIP file.
             </p>
 
             <div className="space-y-4">
@@ -453,7 +491,6 @@ export default function Hero() {
                 disabled={isGenerating}
               />
 
-              {/* Validation step indicator */}
               {isGenerating && (
                 <div className="rounded-lg border border-border bg-muted/40 px-4 py-3">
                   <div className="flex items-center gap-3 text-sm">
@@ -467,7 +504,6 @@ export default function Hero() {
                       )}
                     </div>
                   </div>
-                  {/* Progress dots */}
                   <div className="mt-3 flex gap-1.5">
                     {(["uploading", "validating", "redirecting"] as const).map((step) => (
                       <div
@@ -517,7 +553,7 @@ export default function Hero() {
                     {generatingLabel}
                   </>
                 ) : (
-                  "Generate My Headshots"
+                  `Pay $${pkg.price} & Generate Headshots`
                 )}
               </Button>
             </div>
