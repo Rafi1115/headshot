@@ -141,7 +141,7 @@ export default function Pricing() {
                   )}
                   size="lg"
                 >
-                  Get Started — ${plan.price}
+                  Get Started
                 </Button>
               </div>
             );
