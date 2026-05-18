@@ -32,8 +32,12 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_SSL_REDIRECT = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+
+# Session & CSRF cookie domains for cross-subdomain authentication in production
+SESSION_COOKIE_DOMAIN = config("SESSION_COOKIE_DOMAIN", default=None)
+CSRF_COOKIE_DOMAIN = config("CSRF_COOKIE_DOMAIN", default=None)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
 
 # For Cloudflare
 USE_X_FORWARDED_HOST = True
