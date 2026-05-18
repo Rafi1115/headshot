@@ -78,6 +78,7 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool)
 
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+RESEND_API_KEY = config("RESEND_API_KEY")
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
