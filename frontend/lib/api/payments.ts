@@ -1,5 +1,5 @@
 import { PaymentDashboardData } from "../../types/payment";
-const API_BASE_URL = ((globalThis as any).process?.env?.NEXT_PUBLIC_API_URL as string) || "http://72.62.248.97:8009";
+const API_BASE_URL = ((globalThis as any).process?.env?.NEXT_PUBLIC_API_URL as string) || "https://api.quickheadshotai.com";
 
 function getCookie(name: string): string {
   const v = `; ${document.cookie}`;
