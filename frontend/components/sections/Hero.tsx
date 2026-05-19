@@ -23,7 +23,7 @@ const PACKAGE_CONFIG: Record<Package, {
 }> = {
   INSTANT: {
     label: "Instant",
-    price: 19,
+    price: 1,
     maxInput: 1,
     outputRange: "5–10",
     icon: Zap,
@@ -31,7 +31,7 @@ const PACKAGE_CONFIG: Record<Package, {
   },
   PRO: {
     label: "Pro",
-    price: 49,
+    price: 2,
     maxInput: 5,
     outputRange: "20–40",
     icon: Crown,

@@ -16,8 +16,8 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 # Package prices in cents
 PACKAGE_PRICES = {
-    "INSTANT": 1900,  # $19
-    "PRO":     4900,  # $49
+    "INSTANT": 100,  # $1
+    "PRO":     200,  # $2
 }
 
 PACKAGE_NAMES = {
