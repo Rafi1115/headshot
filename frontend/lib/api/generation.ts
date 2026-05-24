@@ -1,6 +1,6 @@
 // frontend/lib/api/generation.ts
 
-const API_BASE_URL = ((globalThis as any).process?.env?.NEXT_PUBLIC_API_URL as string) || "https://api.quickheadshotai.com";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.quickheadshotai.com";
 
 export async function createJob(email: string, package_type: string = "INSTANT"): Promise<{ job_id: number }> {
   const response = await fetch(`${API_BASE_URL}/jobs/create/`, {

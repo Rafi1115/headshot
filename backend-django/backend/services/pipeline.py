@@ -20,13 +20,27 @@ def run_pipeline(job):
         # Upload original to Cloudinary so Replicate can access it
         image_url = upload_to_cloudinary(image.file.path)
 
-        # Base prompt data — build_prompt handles variations internally
+        # Default prompt data
         prompt_data = {
             "age_text": "adult",
             "gender_text": "person",
             "emotion_text": "neutral expression",
             "skin_text": "unknown"
         }
+
+        # Analyze face to detect age, gender, emotion, and skin tone
+        try:
+            from services.analysis.face_analyzer import analyze_face, normalize_analysis
+            logger.info(f"[PIPELINE] Analyzing face for image path: {image.file.path}")
+            analysis = analyze_face(image.file.path)
+            if analysis and "error" not in analysis:
+                prompt_data = normalize_analysis(analysis)
+                logger.info(f"[PIPELINE] Face analysis successful: {prompt_data}")
+            else:
+                err_msg = analysis.get("error", "Unknown analysis error") if analysis else "No analysis data returned"
+                logger.warning(f"[PIPELINE] Face analysis bypassed or failed: {err_msg}. Using fallback.")
+        except Exception as e:
+            logger.exception(f"[PIPELINE] Face analysis failed with exception: {e}. Using fallback.")
 
         # Generate all headshots with variations
         urls = generate_multiple_headshots(image_url, prompt_data, count)
