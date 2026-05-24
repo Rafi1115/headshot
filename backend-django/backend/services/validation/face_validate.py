@@ -52,8 +52,8 @@ class ImageValidator:
     # --------------------------------------------------
     # 📸 Blur Detection (adaptive threshold based on face size)
     # --------------------------------------------------
-    def _is_blurry(self, face_crop, base_threshold=45):
-        # was 80 — now only rejects genuinely unusable blurry photos
+    def _is_blurry(self, face_crop, base_threshold=15):
+        # was 85, then 45 — now only rejects genuinely unusable blurry photos
         # Normal selfies and phone photos typically score 50-200+
         if face_crop.size == 0:
             return True

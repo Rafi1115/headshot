@@ -99,8 +99,9 @@ def analyze_face(image_path, include_embedding=False):
     # --- Blur Check ---
     blur_score = get_blur_score(image)
     blur_status = assess_blur(blur_score)
-    if blur_status == "blurry":
-        return {"error": "Image too blurry"}
+    # Note: We do not return {"error": "Image too blurry"} here because validation
+    # already performed a face-crop blur check, and full-image blur check often
+    # fails for sharp photos with flat/solid backgrounds.
 
     # --- Face Detection (fast → accurate fallback) ---
     backends = ["opencv", "mtcnn", "retinaface"]
