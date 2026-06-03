@@ -1,6 +1,8 @@
 import cv2
 import mediapipe as mp
+import numpy as np
 from pathlib import Path
+from PIL import Image as PILImage, ImageOps
 
 
 MAX_IMAGE_DIM = 1024   # Resize any image larger than this before detection
@@ -72,8 +74,32 @@ class ImageValidator:
     # --------------------------------------------------
     # ✅ Validate
     # --------------------------------------------------
+    # --------------------------------------------------
+    # 📱 EXIF Auto-Rotate (fixes mobile camera uploads)
+    # --------------------------------------------------
+    def _load_image_with_exif(self, image_path):
+        """
+        Mobile phones (iOS/Android) store raw pixels sideways and rely on
+        EXIF orientation tags for correct display. cv2.imread() ignores these
+        tags, so we use Pillow to apply the rotation first, then convert to
+        a BGR numpy array for OpenCV/MediaPipe.
+        """
+        try:
+            pil_img = PILImage.open(image_path)
+            # ImageOps.exif_transpose rotates/flips the pixel data according
+            # to the EXIF orientation tag and strips the tag afterward.
+            pil_img = ImageOps.exif_transpose(pil_img)
+            # Ensure RGB (handles PNG with alpha, palette images, etc.)
+            pil_img = pil_img.convert("RGB")
+            # Convert RGB → BGR for OpenCV compatibility
+            img_bgr = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+            return img_bgr
+        except Exception:
+            # Fall back to plain OpenCV read if Pillow fails
+            return cv2.imread(image_path)
+
     def validate(self, image_path):
-        img = cv2.imread(image_path)
+        img = self._load_image_with_exif(image_path)
         if img is None:
             return False, "Invalid image path or unreadable file", None
 
