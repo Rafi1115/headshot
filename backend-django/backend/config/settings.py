@@ -38,7 +38,8 @@ SESSION_COOKIE_DOMAIN = config("SESSION_COOKIE_DOMAIN", default=None)
 CSRF_COOKIE_DOMAIN = config("CSRF_COOKIE_DOMAIN", default=None)
 SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
 CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
-
+SESSION_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SAMESITE = "None"
 # For Cloudflare
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
@@ -76,8 +77,8 @@ CORS_ALLOW_METHODS = [
 ]
 
 # Lax is fine for same-site localhost; switch to None + Secure in production
-SESSION_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SAMESITE = "None"
 # Must be False so JS (getCookie helper) can read it for X-CSRFToken header
 CSRF_COOKIE_HTTPONLY = False
 
@@ -158,7 +159,7 @@ INSTALLED_APPS = [
     'images.apps.ImagesConfig',
     'payments.apps.PaymentsConfig',
     'analytics.apps.AnalyticsConfig',
-]
+]	
 
 MIDDLEWARE = [
     # CorsMiddleware MUST be first (before CommonMiddleware)
