@@ -48,8 +48,32 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Load origins from environment or default to localhost for dev
 env_origins = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3009,http://127.0.0.1:3009").split(",")
-CORS_ALLOWED_ORIGINS = env_origins
-CSRF_TRUSTED_ORIGINS = env_origins
+CORS_ALLOWED_ORIGINS = [o.strip() for o in env_origins if o.strip()]
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in env_origins if o.strip()]
+
+# Explicitly allow headers needed for multipart uploads and JSON from mobile browsers.
+# Without this, iOS Safari's CORS preflight (OPTIONS) fails → "Load failed" error.
+from corsheaders.defaults import default_headers
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "content-type",
+    "content-disposition",
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "x-csrftoken",
+    "x-requested-with",
+    "cache-control",
+    "origin",
+]
+
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
 
 # Lax is fine for same-site localhost; switch to None + Secure in production
 SESSION_COOKIE_SAMESITE = "Lax"
