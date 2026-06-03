@@ -154,6 +154,37 @@ export default function Hero() {
     setIsDragging(false);
   }, []);
 
+  // Compress image via canvas — resizes to max 1500px and encodes as JPEG ~0.82 quality.
+  // Mobile camera photos are 4–10 MB; nginx default client_max_body_size is 1 MB.
+  // Without compression the upload connection is hard-dropped → "Failed to fetch" on mobile.
+  function compressImage(dataUrl: string): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX_DIM = 1500;
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(dataUrl); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = () => resolve(dataUrl); // fallback: use original if canvas fails
+      img.src = dataUrl;
+    });
+  }
+
   function handleFiles(files: File[]) {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
     const maxSize = 10 * 1024 * 1024;
@@ -179,10 +210,13 @@ export default function Hero() {
 
     if (validFiles.length === 0) return;
 
+    // Read → compress → store
     const readers = validFiles.map((file) =>
       new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
+        reader.onload = () => {
+          compressImage(reader.result as string).then(resolve).catch(reject);
+        };
         reader.onerror = reject;
         reader.readAsDataURL(file);
       })
