@@ -73,36 +73,55 @@ class CreateCheckoutSessionView(APIView):
 @csrf_exempt
 def stripe_webhook(request):
     payload = request.body
-    try:
-        event = stripe.Event.construct_from(
-            __import__('json').loads(payload), stripe.api_key
-        )
-    except Exception as e:
-        print(f"[WEBHOOK ERROR] {e}")
-        return HttpResponse(status=400)
+    sig_header = request.headers.get("stripe-signature") or request.META.get("HTTP_STRIPE_SIGNATURE")
+    
+    event = None
+    if settings.STRIPE_WEBHOOK_SECRET and sig_header:
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+            )
+        except stripe.error.SignatureVerificationError as e:
+            print(f"[WEBHOOK ERROR] Signature verification failed: {e}")
+            return HttpResponse(status=400)
+        except Exception as e:
+            print(f"[WEBHOOK ERROR] construct_event failed: {e}")
+            return HttpResponse(status=400)
+
+    if not event:
+        try:
+            event = stripe.Event.construct_from(
+                __import__('json').loads(payload), stripe.api_key
+            )
+        except Exception as e:
+            print(f"[WEBHOOK ERROR] construct_from failed: {e}")
+            return HttpResponse(status=400)
 
     print(f"[WEBHOOK] Event: {event['type']}")
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        metadata = session.metadata or {}
-        job_id = metadata.get("job_id") if hasattr(metadata, 'get') else getattr(metadata, 'job_id', None)
+        session_dict = session.to_dict() if hasattr(session, "to_dict") else dict(session)
+        metadata = session_dict.get("metadata") or {}
+        job_id = metadata.get("job_id")
 
         if not job_id:
+            print("[WEBHOOK] No job_id found in metadata")
             return HttpResponse(status=200)
 
         try:
             job = Job.objects.get(id=job_id)
         except Job.DoesNotExist:
+            print(f"[WEBHOOK] Job {job_id} not found")
             return HttpResponse(status=200)
 
         try:
             Payment.objects.get_or_create(
                 provider="stripe",
-                provider_payment_id=session.id,
+                provider_payment_id=session_dict.get("id"),
                 defaults={
                     "job": job,
-                    "amount": session.amount_total or 0,
+                    "amount": session_dict.get("amount_total") or 0,
                     "status": Payment.Status.SUCCESS,
                 }
             )

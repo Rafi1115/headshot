@@ -96,8 +96,8 @@ def process_job(self, job_id):
             logger.error(f"[PROCESS] Job {job_id} not found.")
             return
 
-        if job.status in [Job.Status.COMPLETED]:
-            logger.info(f"[PROCESS] Job {job.id} already completed. Skipping.")
+        if job.status in [Job.Status.PROCESSING, Job.Status.COMPLETED]:
+            logger.info(f"[PROCESS] Job {job.id} already processing or completed. Skipping.")
             return
 
         job.status = Job.Status.PROCESSING

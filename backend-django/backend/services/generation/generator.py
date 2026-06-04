@@ -31,7 +31,24 @@ def generate_headshot(image_url, prompt):
             "prompt": positive,
         }
     )
-    return output.url
+    
+    if not output:
+        return None
+
+    # Replicate client.run returns a list of outputs for image generation models
+    if isinstance(output, list):
+        item = output[0]
+    elif hasattr(output, "__iter__") and not isinstance(output, (str, bytes)):
+        item = next(iter(output), None)
+    else:
+        item = output
+
+    if hasattr(item, "url"):
+        return item.url
+    elif isinstance(item, str):
+        return item
+
+    return str(item)
 
 
 def generate_multiple_headshots(image_url, prompt_data, count):
